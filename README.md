@@ -47,12 +47,13 @@ Each factor is converted into a percentile rank within the analyzed sample.
 The final score is calculated as:
 
 Content-Richness Score =
-(Article Length Percentile × 0.40)
-+ (Section Count Percentile × 0.20)
-+ (Infobox Fields Percentile × 0.10)
-+ (Images Percentile × 0.10)
-+ (References Percentile × 0.20)
+    (Article Length Percentile × 0.40)
+  + (Section Count Percentile × 0.20)
+  + (Infobox Fields Percentile × 0.10)
+  + (Images Percentile × 0.10)
+  + (References Percentile × 0.20)
 
+Final Score = Weighted Score × 100
 The weighted score is multiplied by 100 to produce a score from approximately 0–100.
 
 ## 📈 Results
