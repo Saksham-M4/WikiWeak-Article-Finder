@@ -394,10 +394,5 @@ With transparent scoring
         ↓
 Through an interactive dashboard
 
-### One important thing
 
-After pasting this into GitHub, **don't add anything else unless the actual project contains it**. This version is enough for your submission and explains the project from A–Z without making unsupported claims.
-Your file library is full. New files won't be saved to your library, but you can still use them in this chat. To store new files for later, free up space or upgrade your storage.
-Upgrade
 
-Manage
