@@ -1,20 +1,30 @@
-# WikiWeak Article Finder
 
-## Detecting Relatively Low-Content Wikipedia Articles Using Wikimedia Structured Data
 
-WikiWeak Article Finder is a data science project that analyzes Wikipedia articles and identifies articles with relatively low content richness using structured information from Wikimedia's English Wikipedia dataset.
+# 📚 WikiWeak Article Finder
 
-The project extracts measurable content factors such as article length, sections, infobox fields, images, and references. These factors are combined into a weighted content-richness score, which is then used to rank articles and identify relatively limited-content articles.
+## Detecting Relatively Limited-Content Wikipedia Articles Using Wikimedia Structured Data
 
-The results are presented through an interactive Streamlit dashboard.
+WikiWeak Article Finder is an experimental data-analysis project that analyzes Wikipedia articles and identifies articles with **relatively limited measurable content** using structured information from Wikimedia's English Wikipedia dataset.
 
-> **Important:** The score used in this project is an experimental relative measure created for this project. It is **not an official Wikimedia or Wikipedia article-quality rating**.
+The system measures five content-related factors:
+
+- **Word Count**
+- **Section Count**
+- **Infobox Fields**
+- **Images**
+- **References**
+
+These factors are converted into percentile values within the analyzed sample and combined using transparent weights to produce an experimental **content-richness score**.
+
+The results are presented through an interactive **Streamlit dashboard**.
+
+> **Important:** The score is an experimental relative measure created for this project. It is **not an official Wikimedia or Wikipedia article-quality rating**.
 
 ---
 
-## 📌 Problem Statement
+# 🎯 Problem Statement
 
-Wikipedia contains millions of articles with large differences in the amount of available content.
+Wikipedia contains a very large number of articles with substantial differences in the amount of available content.
 
 Some articles may contain:
 
@@ -26,21 +36,22 @@ Some articles may contain:
 
 Manually identifying such articles across a large dataset is difficult.
 
-### Objective
+## Objective
 
-Build a system that can:
+The project aims to:
 
 1. Analyze multiple Wikipedia articles.
 2. Extract measurable content-related factors.
-3. Calculate a content-richness score.
+3. Calculate an experimental content-richness score.
 4. Rank articles according to that score.
-5. Identify articles with relatively limited content.
-6. Display the factors responsible for each score.
-7. Provide an interactive way to explore the results.
+5. Identify articles with relatively limited measurable content.
+6. Show the actual factors behind each result.
+7. Explain how the score is calculated.
+8. Provide an interactive dashboard for exploration.
 
 ---
 
-# 🔎 Our Approach
+# 🔎 Core Approach
 
 The project follows this pipeline:
 
@@ -49,47 +60,52 @@ Wikimedia Structured Wikipedia Dataset
                 ↓
         Select Article Sample
                 ↓
-       Extract Article Factors
+        Extract Content Factors
                 ↓
-   ┌────────────┬────────────┬────────────┐
-   │            │            │            │
- Length      Sections     Infoboxes     Images
-   │            │            │            │
-   └────────────┴────────────┴────────────┘
-                    ↓
-               References
-                    ↓
-          Calculate Percentiles
-                    ↓
-        Weighted Content Score
-                    ↓
-           Rank the Articles
-                    ↓
-       Identify Lowest-Scoring 5%
-                    ↓
-          Streamlit Dashboard
+ ┌──────────┬──────────┬──────────┬──────────┐
+ │          │          │          │          │
+Word Count Sections  Infoboxes   Images   References
+ │          │          │          │          │
+ └──────────┴──────────┴──────────┴──────────┘
+                ↓
+        Calculate Percentiles
+                ↓
+      Apply Transparent Weights
+                ↓
+     Content-Richness Score
+                ↓
+        Rank the Articles
+                ↓
+   Identify Relatively Limited
+          Content Articles
+                ↓
+        Streamlit Dashboard
 ```
+
+### Important design principle
+
+An article is **not** considered limited-content because of one factor alone.
+
+The result is based on the **combined behavior of five measurable content factors**.
 
 ---
 
 # 📊 Dataset
 
-The project uses the:
+The project uses:
 
 **Wikipedia Structured Contents — English Wikipedia (`enwiki`)**
 
-dataset provided by the Wikimedia Foundation / Wikimedia Enterprise through Kaggle.
+The dataset is provided through the Wikimedia ecosystem.
 
-The dataset contains structured information for millions of English Wikipedia articles.
-
-Each article record can contain information such as:
+Article records can contain structured information such as:
 
 - Article name
 - Article URL
 - Description
 - Abstract
 - Article version information
-- Article length
+- Article text/content information
 - Images
 - Infoboxes
 - Sections
@@ -100,69 +116,68 @@ Each article record can contain information such as:
 
 # 🧪 Sampling Method
 
-The complete English Wikipedia dataset contains millions of article records and is too large to load completely into the available notebook memory.
+The complete English Wikipedia dataset contains millions of article records and is too large to load completely into the available notebook environment.
 
 Therefore, a memory-efficient sampling approach was used.
 
 For each Parquet shard:
 
 1. Up to 150 rows were read.
-2. The sampled rows from all shards were combined.
-3. A random sample of 10,000 articles was selected using seed `42`.
+2. The sampled rows from the shards were combined.
+3. A random sample of **10,000 articles** was selected using seed `42`.
 
-Therefore, the project analyzes a:
+Therefore, the current project analyzes:
 
-**10,000-article sample**
+> **10,000 sampled Wikipedia articles**
 
-drawn from the Wikimedia structured dataset.
-
-> This sampling method should not be interpreted as a perfectly uniform random sample of all English Wikipedia articles.
+This should not be interpreted as a perfectly uniform random sample of all English Wikipedia articles.
 
 ---
 
-# 🧩 Features Extracted
+# 🧩 Five Content Factors
 
-The project uses five main measurable factors.
+The project uses five measurable factors:
 
-| Factor | Description | Weight |
+| Factor | What it measures | Weight |
 |---|---|---:|
-| Article Length | Number of characters in the article version | 40% |
-| Section Count | Number of structured sections | 20% |
-| Infobox Fields | Number of detected infobox fields | 10% |
-| Images | Number of detected images | 10% |
-| References | Number of references | 20% |
+| **Word Count** | Number of words in the available article content | **40%** |
+| **Section Count** | Number of structured sections | **20%** |
+| **References** | Number of detected references | **20%** |
+| **Infobox Fields** | Number of detected infobox fields | **10%** |
+| **Images** | Number of detected images | **10%** |
 
-These factors provide measurable indicators of the amount of textual and structured content available in an article.
+These factors are used together to estimate the amount of measurable content available in an article.
+
+> **Note:** The weights are experimental project choices and are not official Wikimedia weights.
 
 ---
 
 # 📐 Scoring Method
 
-Different factors have different numerical ranges.
+The five factors have different numerical ranges.
 
 For example:
 
-- Article length may contain thousands of characters.
+- Word counts can vary substantially.
 - Sections may be counted in tens.
-- Images may be few.
-- References may vary widely.
+- Images may be relatively few.
+- References can vary widely.
+- Infobox fields can also vary between articles.
 
-To make these factors comparable, each factor is converted into a **percentile rank within the analyzed sample**.
+To make the factors comparable, each factor is converted into a **percentile rank within the analyzed sample**.
 
-The percentile values are then combined using weighted scoring.
+The percentile values are then combined using the displayed weights.
 
-### Formula
+## Formula
 
 ```text
-Content Richness Score =
-    (Length Percentile × 0.40)
+Content-Richness Score =
+    (Word Count Percentile × 0.40)
   + (Section Percentile × 0.20)
   + (Infobox Percentile × 0.10)
   + (Image Percentile × 0.10)
   + (Reference Percentile × 0.20)
 ```
-
-The weighted score is multiplied by 100.
 
 ```text
 Final Score = Weighted Percentile Score × 100
@@ -176,15 +191,23 @@ The resulting score is approximately on a:
 
 scale.
 
+### Interpretation
+
+A higher score means the article has relatively higher measured content across the selected factors within the analyzed sample.
+
+A lower score means the article has relatively lower measured content across the selected factors within the analyzed sample.
+
+The score is **relative**, not an absolute measure of article quality.
+
 ---
 
 # 📉 Identifying Relatively Limited-Content Articles
 
-Instead of defining an arbitrary fixed score, the project uses the score distribution of the analyzed sample.
+Instead of using an arbitrary universal score, the project uses the distribution of scores in the analyzed sample.
 
-The bottom **5%** of the analyzed articles are classified as:
+The lowest **5%** of the analyzed articles are identified as:
 
-**Relatively limited-content articles**
+> **Relatively limited-content articles**
 
 For the current 10,000-article sample:
 
@@ -195,40 +218,78 @@ For the current 10,000-article sample:
 | Articles identified | 502 |
 | Lowest observed score | ~9.41 |
 
-The count is 502 because articles at or below the calculated threshold are included.
+Articles at or below the calculated threshold are included in the limited-content group.
+
+> This is an experimental project classification based on the selected factors and sample. It is **not an official Wikimedia classification**.
 
 ---
 
-# 📈 Current Results
+# 🔎 Why an Article Is Considered Relatively Limited-Content
 
-Some of the lowest-scoring articles in the analyzed sample include:
+For every selected article, the dashboard displays the actual values of the five factors.
 
-| Article | Score | Characters | Sections | Infobox Fields | Images | References |
-|---|---:|---:|---:|---:|---:|---:|
-| Aşağıçavuş | 9.41 | 91 | 1 | 0 | 0 | 0 |
-| Oswell | 9.41 | 88 | 1 | 0 | 0 | 0 |
-| Tarao Naga | 9.42 | 95 | 1 | 0 | 0 | 0 |
-| Kambaata | 9.42 | 94 | 1 | 0 | 0 | 0 |
-| Weston Fen | 9.43 | 98 | 1 | 0 | 0 | 0 |
+Example:
 
-These examples demonstrate how the scoring system identifies articles containing very limited measurable content within the analyzed sample.
+```text
+Article: Example Article
+
+Word Count:       107
+Sections:           1
+Infobox Fields:     0
+Images:             0
+References:         0
+
+Content-Richness Score: 9.43 / 100
+```
+
+The dashboard also displays:
+
+- Relative percentile for each factor
+- Weight assigned to each factor
+- Weighted contribution
+- Final score
+
+This allows the user to understand **why the score is relatively low**.
+
+### Important
+
+The application does **not** decide that an article is limited-content from word count alone.
+
+Instead:
+
+```text
+Word Count
+     +
+Sections
+     +
+Infobox Fields
+     +
+Images
+     +
+References
+     ↓
+Combined Content-Richness Score
+```
+
+This makes the result transparent and explainable.
 
 ---
 
-# 🖥️ Interactive Dashboard
+# 🖥️ Interactive Streamlit Dashboard
 
 The project includes an interactive Streamlit dashboard.
 
-### 📊 Dataset Summary
+## 📊 Dataset Summary
 
 The dashboard displays:
 
 - Number of articles analyzed
 - Number of limited-content articles
 - Score threshold
+- Number of scoring factors
 - Current filtered results
 
-### 🔍 Article Search
+## 🔍 Article Search
 
 Users can search for a specific article by name.
 
@@ -238,38 +299,46 @@ Example:
 Oswell
 ```
 
-### 🎚️ Score Filtering
+## 🎚️ Score Filtering
 
-Users can adjust the maximum content-richness score to explore different portions of the dataset.
+Users can adjust the maximum content-richness score to explore different portions of the analyzed dataset.
 
-### 📋 Results Table
+## 📋 Article Results
 
 The dashboard displays:
 
-- Rank
 - Article name
 - Content-richness score
-- Article length
-- Section count
-- Infobox fields
+- Word Count
+- Section Count
+- Infobox Fields
 - Images
 - References
 
-### 📈 Score Distribution
+## 📈 Score Distribution
 
 A histogram shows how content-richness scores are distributed across the analyzed sample.
 
-### 📉 Lowest-Scoring Articles
+## 📉 Lowest Content-Richness Scores
 
 The dashboard displays articles with the lowest calculated scores.
 
-### 🔎 Article Inspector
+## 🔎 Article Inspector
 
-A selected article can be inspected individually to see the factors contributing to its score.
+A selected article can be inspected individually.
 
-### 📥 CSV Export
+The inspector shows:
 
-Filtered results can be downloaded as a CSV file directly from the dashboard.
+- Actual factor values
+- Relative percentiles
+- Scoring weights
+- Weighted contributions
+- Final content-richness score
+- Explanation of why the score is relatively low
+
+## 📥 CSV Export
+
+Filtered results can be downloaded directly from the dashboard.
 
 ---
 
@@ -279,14 +348,16 @@ Example article: **Oswell**
 
 | Factor | Value |
 |---|---:|
-| Article Length | 88 characters |
+| Word Count | 107 |
 | Sections | 1 |
 | Infobox Fields | 0 |
 | Images | 0 |
 | References | 0 |
 | Content Score | 9.41 |
 
-The low score results from low percentile values across the measured content factors.
+The score is produced from the **combined percentile values of all five factors**.
+
+Therefore, the application does not claim that the article is limited-content because of one missing feature. It identifies relatively limited measurable content based on the combined scoring model.
 
 ---
 
@@ -294,40 +365,40 @@ The low score results from low percentile values across the measured content fac
 
 ```text
                  Wikimedia Dataset
-                        │
-                        ▼
+                       │
+                       ▼
                   Parquet Files
-                        │
-                        ▼
-             Memory-Efficient Sampling
-                        │
-                        ▼
-                 Feature Extraction
-                        │
-          ┌─────────────┼─────────────┐
-          ▼             ▼             ▼
-       Length        Sections      Infoboxes
-          │             │             │
-          └─────────────┼─────────────┘
-                        │
-                 Images + References
-                        │
-                        ▼
+                       │
+                       ▼
+            Memory-Efficient Sampling
+                       │
+                       ▼
+               Feature Extraction
+                       │
+       ┌───────────────┼────────────────┐
+       ▼               ▼                ▼
+   Word Count       Sections         Infoboxes
+       │               │                │
+       └───────────────┼────────────────┘
+                       │
+                Images + References
+                       │
+                       ▼
                 Percentile Ranking
-                        │
-                        ▼
-             Weighted Scoring Model
-                        │
-                        ▼
-                  Article Ranking
-                        │
-                        ▼
-               Bottom 5% Detection
-                        │
-                        ▼
+                       │
+                       ▼
+              Weighted Scoring Model
+                       │
+                       ▼
+                 Article Ranking
+                       │
+                       ▼
+              Bottom 5% Detection
+                       │
+                       ▼
                    Results CSV
-                        │
-                        ▼
+                       │
+                       ▼
                 Streamlit Dashboard
 ```
 
@@ -344,7 +415,7 @@ The low score results from low percentile values across the measured content fac
 - Polars
 - Pandas
 
-### Visualization & Dashboard
+### Dashboard & Visualization
 
 - Streamlit
 - Matplotlib
@@ -381,7 +452,7 @@ WikiWeak-Article-Finder/
 
 Contains the Streamlit dashboard application.
 
-### `notebook41a4210044.ipynb`
+### Analysis notebook
 
 Contains the dataset processing, feature extraction, scoring, ranking, and analysis workflow.
 
@@ -391,7 +462,7 @@ Contains the generated results from the 10,000-article analysis.
 
 ### `README.md`
 
-Contains project documentation.
+Contains project documentation and methodology.
 
 ---
 
@@ -433,9 +504,7 @@ pip install streamlit pandas matplotlib
 streamlit run app.py
 ```
 
-The dashboard will open in the browser.
-
-If it does not open automatically, Streamlit normally provides a local address such as:
+The dashboard will normally be available at:
 
 ```text
 http://localhost:8501
@@ -451,55 +520,58 @@ The analysis uses a fixed random seed:
 seed=42
 ```
 
-This makes the final 10,000-article sample reproducible when the same shard-selection procedure and dataset version are used.
+This helps reproduce the same 10,000-article sample when the same dataset version and sampling procedure are used.
 
-The dataset processing was performed in Kaggle because the complete Wikimedia dataset is very large.
+The large dataset was processed in Kaggle because the complete Wikimedia dataset is very large.
 
-The generated CSV is included in this repository so that the Streamlit dashboard can run without requiring users to download the full Wikimedia dataset.
+The generated CSV is included in the repository so that the Streamlit dashboard can run without requiring users to download the full dataset.
 
 ---
 
 # ⚠️ Limitations
 
-This project is an experimental data-analysis system and has several limitations.
-
-### 1. Sample-Based Analysis
+## 1. Sample-Based Analysis
 
 Only 10,000 articles were analyzed instead of the entire English Wikipedia dataset.
 
-### 2. Sampling Method
+## 2. Sampling Method
 
 The sample was constructed by taking up to 150 rows from each Parquet shard and then randomly selecting 10,000 rows.
 
 Therefore, it should not be treated as a perfectly representative random sample of all Wikipedia articles.
 
-### 3. Content Richness Is Not Article Quality
+## 3. Content Richness Is Not Article Quality
 
-A low content-richness score does not necessarily mean that an article is incorrect, unimportant, or poorly written.
+A low content-richness score does **not** necessarily mean that an article is:
+
+- Incorrect
+- Unimportant
+- Poorly written
+- In need of deletion
 
 A short article can still provide useful information.
 
-### 4. Experimental Score
+## 4. Experimental Score
 
 The weights used in this project were chosen for the purposes of this prototype:
 
 | Factor | Weight |
 |---|---:|
-| Article Length | 40% |
+| Word Count | 40% |
 | Sections | 20% |
+| References | 20% |
 | Infobox Fields | 10% |
 | Images | 10% |
-| References | 20% |
 
-They are not official Wikimedia weights.
+These are **not official Wikimedia weights**.
 
-### 5. Structured Data Limitations
+## 5. Structured Data Limitations
 
-Some fields in the dataset are stored as nested JSON structures. The project therefore uses parsing and counting rules to extract measurable factors.
+Some dataset fields are stored as nested structured data. Parsing and counting rules are therefore used to extract measurable factors.
 
-### 6. Relative Ranking
+## 6. Relative Ranking
 
-Because the score is percentile-based, the score describes an article's position relative to the analyzed sample rather than providing an absolute measure of article quality.
+Because the score is percentile-based, it describes an article's position relative to the analyzed sample rather than providing an absolute measure of article quality.
 
 ---
 
@@ -509,7 +581,7 @@ Possible future improvements include:
 
 - Analyze a larger portion of the Wikimedia dataset.
 - Improve the sampling methodology.
-- Add additional content-quality indicators.
+- Add additional content-richness indicators.
 - Include table counts.
 - Analyze reference quality and diversity.
 - Detect extremely short articles separately.
@@ -517,7 +589,7 @@ Possible future improvements include:
 - Add filtering by article type or topic.
 - Add time-based analysis using article versions.
 - Compare scores across different dataset snapshots.
-- Improve the scoring model using validated quality indicators.
+- Improve the scoring model using validated indicators.
 - Deploy the dashboard publicly.
 
 ---
@@ -542,7 +614,7 @@ Ranking
 Interactive Visualization
 ```
 
-The resulting system provides a practical way to explore articles that contain relatively limited measurable content within the analyzed sample.
+The resulting system provides a transparent way to explore Wikipedia articles that contain **relatively limited measurable content within the analyzed sample**.
 
 ---
 
@@ -589,29 +661,31 @@ Special thanks to the organizers of the Open Source Day / WikiClub Tech event fo
 
 # ⭐ Summary
 
-WikiWeak Article Finder analyzes 10,000 sampled English Wikipedia articles, extracts measurable content features, calculates a percentile-based content-richness score, identifies the bottom 5% of the analyzed sample, and presents the results through an interactive Streamlit dashboard.
+WikiWeak Article Finder analyzes 10,000 sampled English Wikipedia articles, extracts measurable content features, calculates a percentile-based content-richness score, identifies the lowest-scoring group of the analyzed sample, and presents the results through an interactive Streamlit dashboard.
 
 ### Core Idea
 
 ```text
-Analyze → Measure → Score → Rank → Explore
+Analyze → Measure → Score → Explain → Rank → Explore
 ```
 
 ### WikiWeak Article Finder
 
 ```text
-Find relatively low-content articles
+Find relatively limited-content articles
               ↓
 Using measurable structured-data factors
               ↓
 With transparent scoring
+              ↓
+Showing the actual factors behind the score
               ↓
 Through an interactive dashboard
 ```
 
 ---
 
-## ⭐ Project Status
+# ⭐ Project Status
 
 **Completed Prototype**
 
@@ -619,6 +693,7 @@ The project includes:
 
 - Dataset analysis
 - Feature extraction
+- Word-count-based content analysis
 - Content-richness scoring
 - Article ranking
 - Limited-content detection
@@ -626,6 +701,6 @@ The project includes:
 - Interactive Streamlit dashboard
 - Search and filtering
 - Article score inspection
+- Score explanation
 - CSV export
 - Complete project documentation
-
