@@ -1,6 +1,13 @@
 import streamlit as st
 import pandas as pd
 
+def count_words(text):
+    """Return a simple whitespace-delimited word count."""
+    if not isinstance(text, str):
+        return 0
+    return len(text.split())
+
+
 
 # ============================================================
 # PAGE CONFIG
@@ -65,6 +72,54 @@ SCORE_THRESHOLD = (
     if len(limited_df) > 0
     else df["content_richness_score"].quantile(0.05)
 )
+
+# Percentile ranks are the same type of relative normalization used
+# when the submitted content-richness score was created.
+FACTOR_COLUMNS = {
+    "Word Count": "article_length",
+    "Section Count": "section_count",
+    "Infobox Fields": "infobox_field_count",
+    "Images": "image_count",
+    "References": "reference_count",
+}
+
+FACTOR_WEIGHTS = {
+    "Word Count": 0.40,
+    "Section Count": 0.20,
+    "Infobox Fields": 0.10,
+    "Images": 0.10,
+    "References": 0.20,
+}
+
+FACTOR_LABELS = {
+    "Word Count": "Word count (words)",
+    "Section Count": "Sections",
+    "Infobox Fields": "Infobox fields",
+    "Images": "Images",
+    "References": "References",
+}
+
+def score_evidence(article_row):
+    """Return the factor values, relative percentiles, weights and contributions
+    for one article. This explains the experimental score; it does not
+    judge the correctness or quality of the article's information.
+    """
+    rows = []
+    for factor, column in FACTOR_COLUMNS.items():
+        values = pd.to_numeric(df[column], errors="coerce")
+        value = float(article_row[column])
+        # pandas rank(pct=True) is equivalent to the percentile-rank method
+        # used in the analysis notebook for the submitted sample.
+        percentile = float(values.rank(pct=True).loc[article_row.name])
+        weight = FACTOR_WEIGHTS[factor]
+        rows.append({
+            "Factor": FACTOR_LABELS[factor],
+            "Actual value": int(value),
+            "Relative percentile": percentile * 100,
+            "Weight": f"{weight * 100:.0f}%",
+            "Weighted contribution": percentile * weight * 100,
+        })
+    return pd.DataFrame(rows)
 
 
 # ============================================================
@@ -139,7 +194,7 @@ with st.sidebar:
 
     st.subheader("🧮 Scoring Weights")
 
-    st.write("Article Length — **40%**")
+    st.write("Word Count — **40%**")
     st.write("Section Count — **20%**")
     st.write("References — **20%**")
     st.write("Infobox Fields — **10%**")
@@ -179,7 +234,7 @@ st.markdown(
     WikiWeak analyzes measurable article-content factors from
     Wikimedia's Wikipedia Structured Contents dataset.
 
-    The system extracts article length, sections, infobox fields,
+    The system extracts word count, sections, infobox fields,
     images and references, then combines their percentile ranks
     into an experimental content-richness score.
 
@@ -298,7 +353,7 @@ st.dataframe(
             format="%.2f"
         ),
         "article_length": st.column_config.NumberColumn(
-            "Length",
+            "Length (words)",
             format="%d"
         ),
         "section_count": st.column_config.NumberColumn(
@@ -450,7 +505,7 @@ if len(filtered_df) > 0:
     with a:
 
         st.metric(
-            "Article Length",
+            "Word Count",
             f"{int(article['article_length']):,}"
         )
 
@@ -483,6 +538,64 @@ if len(filtered_df) > 0:
             f"{score:.2f}"
         )
 
+    # --------------------------------------------------------
+    # WHY THIS SCORE?
+    # --------------------------------------------------------
+    st.markdown("### 🔎 Why is this article relatively limited-content?")
+
+    evidence = score_evidence(article)
+
+    low_factors = evidence.sort_values(
+        "Relative percentile"
+    ).head(3)
+
+    if score <= SCORE_THRESHOLD:
+        st.write(
+            "This article falls within the lowest-scoring group of the "
+            "analyzed sample. The result is based on the combined behavior "
+            "of five content factors — not on any single factor alone."
+        )
+    else:
+        st.write(
+            "This article is not in the lowest-scoring group. The table below "
+            "shows how its five content factors contribute to the experimental "
+            "content-richness score."
+        )
+
+    st.dataframe(
+        evidence,
+        use_container_width=True,
+        hide_index=True,
+        column_config={
+            "Relative percentile": st.column_config.NumberColumn(
+                "Relative percentile",
+                format="%.1f"
+            ),
+            "Weighted contribution": st.column_config.NumberColumn(
+                "Weighted contribution",
+                format="%.2f"
+            )
+        }
+    )
+
+    st.caption(
+        "A lower relative percentile means the article has less of that "
+        "measured factor than more articles in this analyzed sample. "
+        "The factors are combined using the displayed weights."
+    )
+
+    if score <= SCORE_THRESHOLD:
+        factor_text = ", ".join(
+            low_factors["Factor"].tolist()
+        )
+        st.info(
+            f"The three lowest relative factors for this article are: "
+            f"**{factor_text}**. These factors contribute less to the "
+            f"overall score relative to the analyzed sample. This is an "
+            f"experimental content-richness indicator, not an official "
+            f"Wikimedia quality judgment."
+        )
+
 else:
 
     st.warning(
@@ -504,15 +617,17 @@ st.markdown(
 )
 
 st.write(
-    "Each factor is converted into a percentile rank within "
-    "the analyzed sample. Weighted percentile values are then "
-    "combined to produce the final score."
+    "Each of the five measurable content factors is converted into a "
+    "relative percentile within the analyzed sample. The five weighted "
+    "percentiles are then combined into one experimental content-richness "
+    "score. This means an article is not identified from word count, "
+    "images, or any other single factor alone."
 )
 
 st.code(
     """
 Content-Richness Score =
-    (Article Length Percentile × 0.40)
+    (Word Count Percentile × 0.40)
   + (Section Count Percentile × 0.20)
   + (Infobox Fields Percentile × 0.10)
   + (Images Percentile × 0.10)
@@ -538,7 +653,7 @@ st.markdown(
 factor_df = pd.DataFrame(
     {
         "Factor": [
-            "Article Length",
+            "Word Count",
             "Section Count",
             "Infobox Fields",
             "Images",
@@ -552,7 +667,7 @@ factor_df = pd.DataFrame(
             "20%"
         ],
         "Purpose": [
-            "Measures the amount of article content.",
+            "Measures word count in words; it is one factor among five.",
             "Measures article structure.",
             "Measures structured information.",
             "Measures available visual content.",
