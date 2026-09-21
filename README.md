@@ -1,706 +1,841 @@
+🔎 WikiFact Check
 
+Evidence-First Wikipedia Fact Consistency Checker
 
-# 📚 WikiWeak Article Finder
+WikiFact Check is a Streamlit-based application that checks whether a structured fact from a Wikipedia article's infobox is supported by the corresponding article text.
 
-## Detecting Relatively Limited-Content Wikipedia Articles Using Wikimedia Structured Data
+The system is designed around an evidence-first workflow:
 
-WikiWeak Article Finder is an experimental data-analysis project that analyzes Wikipedia articles and identifies articles with **relatively limited measurable content** using structured information from Wikimedia's English Wikipedia dataset.
+WikiWeak Dataset
+      ↓
+Article Title Resolution
+      ↓
+Wikipedia Article Retrieval
+      ↓
+Infobox Fact Extraction
+      ↓
+Article Text Analysis
+      ↓
+Fact Normalization & Matching
+      ↓
+Match / Possible Mismatch / Not Found
+      ↓
+Exact Evidence Sentence + Wikipedia Article Image
 
-The system measures five content-related factors:
+The goal is not to judge whether an article is "good" or "bad". Instead, the application answers a focused question:
 
-- **Word Count**
-- **Section Count**
-- **Infobox Fields**
-- **Images**
-- **References**
+Does the information in the structured Wikipedia infobox agree with the information stated in the article text?
 
-These factors are converted into percentile values within the analyzed sample and combined using transparent weights to produce an experimental **content-richness score**.
+🎯 Problem Statement
 
-The results are presented through an interactive **Streamlit dashboard**.
+Wikipedia presents information in multiple forms.
 
-> **Important:** The score is an experimental relative measure created for this project. It is **not an official Wikimedia or Wikipedia article-quality rating**.
+For example, an article may contain:
 
----
+A structured infobox with a birth date
 
-# 🎯 Problem Statement
+A founder field
 
-Wikipedia contains a very large number of articles with substantial differences in the amount of available content.
+A location field
 
-Some articles may contain:
+A country field
 
-- Very little text
-- Few or no sections
-- Few or no images
-- Limited infobox information
-- Few references
+The same information expressed naturally inside paragraphs
 
-Manually identifying such articles across a large dataset is difficult.
-
-## Objective
-
-The project aims to:
-
-1. Analyze multiple Wikipedia articles.
-2. Extract measurable content-related factors.
-3. Calculate an experimental content-richness score.
-4. Rank articles according to that score.
-5. Identify articles with relatively limited measurable content.
-6. Show the actual factors behind each result.
-7. Explain how the score is calculated.
-8. Provide an interactive dashboard for exploration.
-
----
-
-# 🔎 Core Approach
-
-The project follows this pipeline:
-
-```text
-Wikimedia Structured Wikipedia Dataset
-                ↓
-        Select Article Sample
-                ↓
-        Extract Content Factors
-                ↓
- ┌──────────┬──────────┬──────────┬──────────┐
- │          │          │          │          │
-Word Count Sections  Infoboxes   Images   References
- │          │          │          │          │
- └──────────┴──────────┴──────────┴──────────┘
-                ↓
-        Calculate Percentiles
-                ↓
-      Apply Transparent Weights
-                ↓
-     Content-Richness Score
-                ↓
-        Rank the Articles
-                ↓
-   Identify Relatively Limited
-          Content Articles
-                ↓
-        Streamlit Dashboard
-```
-
-### Important design principle
-
-An article is **not** considered limited-content because of one factor alone.
-
-The result is based on the **combined behavior of five measurable content factors**.
-
----
-
-# 📊 Dataset
-
-The project uses:
-
-**Wikipedia Structured Contents — English Wikipedia (`enwiki`)**
-
-The dataset is provided through the Wikimedia ecosystem.
-
-Article records can contain structured information such as:
-
-- Article name
-- Article URL
-- Description
-- Abstract
-- Article version information
-- Article text/content information
-- Images
-- Infoboxes
-- Sections
-- Tables
-- References
-
----
-
-# 🧪 Sampling Method
-
-The complete English Wikipedia dataset contains millions of article records and is too large to load completely into the available notebook environment.
-
-Therefore, a memory-efficient sampling approach was used.
-
-For each Parquet shard:
-
-1. Up to 150 rows were read.
-2. The sampled rows from the shards were combined.
-3. A random sample of **10,000 articles** was selected using seed `42`.
-
-Therefore, the current project analyzes:
-
-> **10,000 sampled Wikipedia articles**
-
-This should not be interpreted as a perfectly uniform random sample of all English Wikipedia articles.
-
----
-
-# 🧩 Five Content Factors
-
-The project uses five measurable factors:
-
-| Factor | What it measures | Weight |
-|---|---|---:|
-| **Word Count** | Number of words in the available article content | **40%** |
-| **Section Count** | Number of structured sections | **20%** |
-| **References** | Number of detected references | **20%** |
-| **Infobox Fields** | Number of detected infobox fields | **10%** |
-| **Images** | Number of detected images | **10%** |
-
-These factors are used together to estimate the amount of measurable content available in an article.
-
-> **Note:** The weights are experimental project choices and are not official Wikimedia weights.
-
----
-
-# 📐 Scoring Method
-
-The five factors have different numerical ranges.
+A simple string search can produce incorrect results when the same fact is written in a different form.
 
 For example:
 
-- Word counts can vary substantially.
-- Sections may be counted in tens.
-- Images may be relatively few.
-- References can vary widely.
-- Infobox fields can also vary between articles.
+Infobox:
+Larry Page; Sergey Brin
 
-To make the factors comparable, each factor is converted into a **percentile rank within the analyzed sample**.
+Article:
+Google was founded by Larry Page and Sergey Brin.
 
-The percentile values are then combined using the displayed weights.
+A basic exact-string search may fail because the wording and punctuation are different.
 
-## Formula
+WikiFact Check therefore separates the problem into:
 
-```text
-Content-Richness Score =
-    (Word Count Percentile × 0.40)
-  + (Section Percentile × 0.20)
-  + (Infobox Percentile × 0.10)
-  + (Image Percentile × 0.10)
-  + (Reference Percentile × 0.20)
-```
+Fact extraction
 
-```text
-Final Score = Weighted Percentile Score × 100
-```
+Normalization
 
-The resulting score is approximately on a:
+Relevant article-text matching
 
-```text
-0 – 100
-```
+Evidence extraction
 
-scale.
+Three-state classification
 
-### Interpretation
+✨ Key Features
 
-A higher score means the article has relatively higher measured content across the selected factors within the analyzed sample.
+1. WikiWeak Dataset Integration
 
-A lower score means the article has relatively lower measured content across the selected factors within the analyzed sample.
+The application connects to the WikiWeak article dataset and automatically detects the article-title column.
 
-The score is **relative**, not an absolute measure of article quality.
+Supported title-column names include:
 
----
+name
+title
+article_title
+article_name
+article name
 
-# 📉 Identifying Relatively Limited-Content Articles
+The current connected dataset uses:
 
-Instead of using an arbitrary universal score, the project uses the distribution of scores in the analyzed sample.
+name
 
-The lowest **5%** of the analyzed articles are identified as:
+The application also displays the detected title column and the number of connected article records in the interface.
 
-> **Relatively limited-content articles**
+2. Wikipedia Article Retrieval
 
-For the current 10,000-article sample:
+After an article title is supplied, the application retrieves the corresponding English Wikipedia article.
 
-| Metric | Result |
-|---|---:|
-| Articles analyzed | 10,000 |
-| Limited-content threshold | 11.76 / 100 |
-| Articles identified | 502 |
-| Lowest observed score | ~9.41 |
+It obtains:
 
-Articles at or below the calculated threshold are included in the limited-content group.
+Article title
 
-> This is an experimental project classification based on the selected factors and sample. It is **not an official Wikimedia classification**.
+Infobox information
 
----
+Article text
 
-# 🔎 Why an Article Is Considered Relatively Limited-Content
+Wikipedia article URL
 
-For every selected article, the dashboard displays the actual values of the five factors.
+Main article image when available
+
+3. Multiple Fact Types
+
+The current fact-checking workflow supports:
+
+Fact Type
+
+Example
+
+Birth Date
+
+Narendra Modi → 17 September 1950
+
+Founder
+
+Google → Larry Page, Sergey Brin
+
+Location
+
+Organization/place → stated location
+
+Country
+
+Entity → stated country
+
+The architecture is designed so additional fact types can be added later.
+
+🧠 Fact-Matching Approach
+
+The application does not depend only on literal string equality.
+
+Birth Date
+
+Different date representations can refer to the same date:
+
+1950-09-17
+17 September 1950
+September 17, 1950
+17/09/1950
+
+These representations can be normalized before comparison.
+
+Therefore:
+
+Infobox: 1950-09-17
+
+Article:
+Narendra Modi (born 17 September 1950) ...
+
+can be classified as:
+
+MATCH
+
+Founder
+
+Founder information may appear in different natural-language forms.
+
+For example:
+
+Infobox:
+Larry Page, Sergey Brin
+
+Article:
+Google was founded by Larry Page and Sergey Brin.
+
+The system normalizes the names and searches the article text for supporting information instead of requiring an identical raw string.
+
+🏷️ Three Result States
+
+The application deliberately uses only three final outcomes.
+
+🟢 MATCH
+
+The structured fact and article text represent the same information and supporting evidence is available.
 
 Example:
 
-```text
-Article: Example Article
+MATCH — both information are the same.
 
-Word Count:       107
-Sections:           1
-Infobox Fields:     0
-Images:             0
-References:         0
+🟠 POSSIBLE MISMATCH
 
-Content-Richness Score: 9.43 / 100
-```
+The article contains relevant information, but it does not agree with the structured fact after normalization.
 
-The dashboard also displays:
+Example:
 
-- Relative percentile for each factor
-- Weight assigned to each factor
-- Weighted contribution
-- Final score
+Infobox: 1980
+Article: 1981
 
-This allows the user to understand **why the score is relatively low**.
+The application reports:
 
-### Important
+POSSIBLE MISMATCH
 
-The application does **not** decide that an article is limited-content from word count alone.
+This wording avoids claiming more certainty than the available article evidence supports.
 
-Instead:
+⚪ NOT FOUND
 
-```text
-Word Count
-     +
-Sections
-     +
-Infobox Fields
-     +
-Images
-     +
-References
+The requested corresponding information cannot be found in the available article text.
+
+Example:
+
+Fact type: Country
+Article: [no corresponding country information]
+
+The application reports:
+
+NOT FOUND
+
+📖 Evidence-First Output
+
+A key feature of WikiFact Check is that the result is not presented as a bare label.
+
+When supporting or conflicting evidence is found, the application displays the:
+
+Exact evidence sentence from the Wikipedia article
+
+The interface therefore provides:
+
+Result
+   ↓
+Infobox information
+   ↓
+Exact evidence sentence
+   ↓
+Wikipedia article
+
+This makes the result easier to inspect and demonstrate.
+
+🖼️ Wikipedia Article Image
+
+When Wikipedia provides a main article image, the application automatically displays it.
+
+For example:
+
+Narendra Modi
+      ↓
+Wikipedia image
+      ↓
+Infobox birth information
+      ↓
+Fact-check result
+      ↓
+Evidence sentence
+
+If an article does not have a suitable image, the fact-checking workflow can still operate normally.
+
+🗂️ Dataset Workflow
+
+The application uses the WikiWeak dataset primarily for article-title discovery and dataset integration.
+
+The workflow is:
+
+WikiWeak CSV
      ↓
-Combined Content-Richness Score
-```
+Detect title column
+     ↓
+Load article titles
+     ↓
+Select / enter article
+     ↓
+Retrieve current Wikipedia article
+     ↓
+Extract structured fact
+     ↓
+Compare against article text
 
-This makes the result transparent and explainable.
+The application does not assume that the dataset itself contains the final answer to every fact-check.
 
----
+Instead, it uses the article title to locate the corresponding Wikipedia article and perform the consistency check.
 
-# 🖥️ Interactive Streamlit Dashboard
+🏗️ System Architecture
 
-The project includes an interactive Streamlit dashboard.
+                    WikiWeak Dataset
+                           │
+                           ▼
+                 Article Title Loader
+                           │
+                           ▼
+                Title Column Detection
+                           │
+                           ▼
+                 Wikipedia API Client
+                           │
+              ┌────────────┼────────────┐
+              ▼            ▼            ▼
+           Infobox     Article Text   Page Image
+              │            │            │
+              ▼            ▼            │
+        Fact Extraction  Evidence      │
+              │            │            │
+              └──────┬─────┘            │
+                     ▼                  │
+              Normalization            │
+                     │                  │
+                     ▼                  │
+               Fact Matching            │
+                     │                  │
+          ┌──────────┼──────────┐       │
+          ▼          ▼          ▼       │
+       MATCH    MISMATCH    NOT FOUND   │
+          │          │          │       │
+          └──────────┼──────────┘       │
+                     ▼                  ▼
+              Evidence Sentence    Article Image
+                     │                  │
+                     └────────┬─────────┘
+                              ▼
+                       Streamlit UI
 
-## 📊 Dataset Summary
+🛠️ Technology Stack
 
-The dashboard displays:
+Programming Language
 
-- Number of articles analyzed
-- Number of limited-content articles
-- Score threshold
-- Number of scoring factors
-- Current filtered results
+Python
 
-## 🔍 Article Search
+User Interface
 
-Users can search for a specific article by name.
+Streamlit
 
-Example:
+Data Processing
 
-```text
-Oswell
-```
+Pandas
 
-## 🎚️ Score Filtering
+Wikipedia Integration
 
-Users can adjust the maximum content-richness score to explore different portions of the analyzed dataset.
+Wikimedia MediaWiki API
 
-## 📋 Article Results
+Data Source
 
-The dashboard displays:
+WikiWeak dataset
 
-- Article name
-- Content-richness score
-- Word Count
-- Section Count
-- Infobox Fields
-- Images
-- References
+English Wikipedia
 
-## 📈 Score Distribution
+Development
 
-A histogram shows how content-richness scores are distributed across the analyzed sample.
+Visual Studio Code
 
-## 📉 Lowest Content-Richness Scores
+macOS / Linux / Windows-compatible Python environment
 
-The dashboard displays articles with the lowest calculated scores.
+📁 Project Structure
 
-## 🔎 Article Inspector
-
-A selected article can be inspected individually.
-
-The inspector shows:
-
-- Actual factor values
-- Relative percentiles
-- Scoring weights
-- Weighted contributions
-- Final content-richness score
-- Explanation of why the score is relatively low
-
-## 📥 CSV Export
-
-Filtered results can be downloaded directly from the dashboard.
-
----
-
-# 🧮 Example Score Breakdown
-
-Example article: **Oswell**
-
-| Factor | Value |
-|---|---:|
-| Word Count | 107 |
-| Sections | 1 |
-| Infobox Fields | 0 |
-| Images | 0 |
-| References | 0 |
-| Content Score | 9.41 |
-
-The score is produced from the **combined percentile values of all five factors**.
-
-Therefore, the application does not claim that the article is limited-content because of one missing feature. It identifies relatively limited measurable content based on the combined scoring model.
-
----
-
-# 🏗️ Project Architecture
-
-```text
-                 Wikimedia Dataset
-                       │
-                       ▼
-                  Parquet Files
-                       │
-                       ▼
-            Memory-Efficient Sampling
-                       │
-                       ▼
-               Feature Extraction
-                       │
-       ┌───────────────┼────────────────┐
-       ▼               ▼                ▼
-   Word Count       Sections         Infoboxes
-       │               │                │
-       └───────────────┼────────────────┘
-                       │
-                Images + References
-                       │
-                       ▼
-                Percentile Ranking
-                       │
-                       ▼
-              Weighted Scoring Model
-                       │
-                       ▼
-                 Article Ranking
-                       │
-                       ▼
-              Bottom 5% Detection
-                       │
-                       ▼
-                   Results CSV
-                       │
-                       ▼
-                Streamlit Dashboard
-```
-
----
-
-# 🛠️ Technology Stack
-
-### Programming Language
-
-- Python
-
-### Data Processing
-
-- Polars
-- Pandas
-
-### Dashboard & Visualization
-
-- Streamlit
-- Matplotlib
-
-### Dataset Format
-
-- Apache Parquet
-- JSON structured fields
-
-### Development Environment
-
-- Kaggle Notebooks
-- Visual Studio Code
-
-### Data Source
-
-- Wikimedia Structured Contents
-- English Wikipedia (`enwiki`)
-
----
-
-# 📁 Repository Structure
-
-```text
-WikiWeak-Article-Finder/
+WikiFactCheck/
 │
 ├── app.py
-├── notebook41a4210044.ipynb
+├── fact_engine.py
 ├── wikiweak_results.csv
-└── README.md
-```
+├── requirements.txt
+├── README.md
+├── test_factcheck.py
+├── live_test.py
+├── IMAGE_FEATURE.md
+└── DATASET_NOTE.txt
 
-### `app.py`
+app.py
 
-Contains the Streamlit dashboard application.
+Contains the Streamlit user interface and application workflow.
 
-### Analysis notebook
+fact_engine.py
 
-Contains the dataset processing, feature extraction, scoring, ranking, and analysis workflow.
+Contains the fact extraction, normalization, matching, and evidence logic.
 
-### `wikiweak_results.csv`
+wikiweak_results.csv
 
-Contains the generated results from the 10,000-article analysis.
+Contains the WikiWeak article records used by the application.
 
-### `README.md`
+test_factcheck.py
 
-Contains project documentation and methodology.
+Contains deterministic tests for the fact-checking logic.
 
----
+live_test.py
 
-# 🚀 How to Run Locally
+Contains live Wikipedia-oriented test cases.
 
-## 1. Clone the Repository
+requirements.txt
 
-```bash
-git clone https://github.com/Saksham-M4/WikiWeak-Article-Finder.git
-```
+Contains the Python dependencies required to run the application.
+
+🚀 How to Run
+
+1. Extract the Project
+
+Extract the project ZIP into your Downloads folder or another working directory.
+
+2. Open Terminal
 
 Move into the project directory:
 
-```bash
-cd WikiWeak-Article-Finder
-```
+cd ~/Downloads/WikiFactCheck_TeacherReady_v2
 
-## 2. Create a Virtual Environment
+3. Install Dependencies
 
-```bash
-python3 -m venv .venv
-```
+python3 -m pip install -r requirements.txt
 
-Activate it on macOS/Linux:
+4. Start Streamlit
 
-```bash
-source .venv/bin/activate
-```
+Use:
 
-## 3. Install Required Packages
+python3 -m streamlit run app.py
 
-```bash
-pip install streamlit pandas matplotlib
-```
+Do not start the Streamlit application using:
 
-## 4. Run the Dashboard
+python3 app.py
 
-```bash
-streamlit run app.py
-```
+5. Open the Application
 
-The dashboard will normally be available at:
+Streamlit normally provides:
 
-```text
 http://localhost:8501
-```
 
----
+Open that address in a browser.
 
-# 🔁 Reproducibility
+🧪 Recommended Demonstration Tests
 
-The analysis uses a fixed random seed:
+The following tests cover the major requirements of the project.
 
-```python
-seed=42
-```
+Test 1 — Birth Date Match
 
-This helps reproduce the same 10,000-article sample when the same dataset version and sampling procedure are used.
+Article: Narendra Modi
+Fact Type: Birth Date
 
-The large dataset was processed in Kaggle because the complete Wikimedia dataset is very large.
+Expected:
 
-The generated CSV is included in the repository so that the Streamlit dashboard can run without requiring users to download the full dataset.
+MATCH
 
----
+The application should show:
 
-# ⚠️ Limitations
+Narendra Modi article image
 
-## 1. Sample-Based Analysis
+Infobox birth date
 
-Only 10,000 articles were analyzed instead of the entire English Wikipedia dataset.
+Evidence sentence
 
-## 2. Sampling Method
+Wikipedia article link
 
-The sample was constructed by taking up to 150 rows from each Parquet shard and then randomly selecting 10,000 rows.
+Test 2 — Founder Match
 
-Therefore, it should not be treated as a perfectly representative random sample of all Wikipedia articles.
+Article: Google
+Fact Type: Founder
 
-## 3. Content Richness Is Not Article Quality
+Expected:
 
-A low content-richness score does **not** necessarily mean that an article is:
+MATCH
 
-- Incorrect
-- Unimportant
-- Poorly written
-- In need of deletion
+The application should show:
 
-A short article can still provide useful information.
+Google article image
 
-## 4. Experimental Score
+Founder information
 
-The weights used in this project were chosen for the purposes of this prototype:
+Supporting evidence sentence
 
-| Factor | Weight |
-|---|---:|
-| Word Count | 40% |
-| Sections | 20% |
-| References | 20% |
-| Infobox Fields | 10% |
-| Images | 10% |
+Wikipedia article link
 
-These are **not official Wikimedia weights**.
+Test 3 — Another Article
 
-## 5. Structured Data Limitations
+Example:
 
-Some dataset fields are stored as nested structured data. Parsing and counting rules are therefore used to extract measurable factors.
+Article: Mahendra Singh Dhoni
+Fact Type: Birth Date
 
-## 6. Relative Ranking
+Expected:
 
-Because the score is percentile-based, it describes an article's position relative to the analyzed sample rather than providing an absolute measure of article quality.
+MATCH
 
----
+This demonstrates that the application is not hard-coded only for Narendra Modi.
 
-# 🔮 Future Improvements
+Test 4 — Possible Mismatch
+
+Use an article/fact combination where the structured information and article evidence disagree.
+
+Expected:
+
+POSSIBLE MISMATCH
+
+The application should display the relevant evidence when available.
+
+Test 5 — Not Found
+
+Choose a fact type for which the corresponding information is unavailable in the article.
+
+Expected:
+
+NOT FOUND
+
+This demonstrates that the system distinguishes missing information from an actual mismatch.
+
+👩‍🏫 Teacher Requirement Coverage
+
+The implementation is designed to address the following requirements:
+
+Requirement
+
+Implementation
+
+Correct WikiWeak dataset
+
+WikiWeak CSV integration
+
+Article title column
+
+Automatic column detection
+
+Narendra Modi birth date
+
+Normalized date comparison
+
+Natural-language founder matching
+
+Normalized entity/name matching
+
+Exactly three outcomes
+
+Match / Possible Mismatch / Not Found
+
+Evidence display
+
+Exact Wikipedia evidence sentence
+
+Multiple articles
+
+Article title input + dataset selection
+
+Multiple fact types
+
+Birth Date / Founder / Location / Country
+
+Article image
+
+Wikipedia PageImages retrieval
+
+Interactive interface
+
+Streamlit dashboard
+
+🔍 Example Workflow
+
+Suppose the user selects:
+
+Article:
+Narendra Modi
+
+Fact:
+Birth Date
+
+The application performs:
+
+1. Resolve article title
+        ↓
+2. Retrieve Wikipedia article
+        ↓
+3. Extract infobox birth date
+        ↓
+4. Extract article text
+        ↓
+5. Normalize date representations
+        ↓
+6. Search for supporting evidence
+        ↓
+7. Compare information
+        ↓
+8. Return MATCH
+        ↓
+9. Display evidence sentence
+        ↓
+10. Display article image
+
+🔐 Design Principles
+
+Evidence Before Conclusion
+
+The application attempts to provide supporting article evidence rather than displaying only a result label.
+
+Normalization Before Comparison
+
+Equivalent representations should be normalized before deciding whether information differs.
+
+Three-State Classification
+
+The system separates:
+
+Same
+Different
+Unavailable
+
+into:
+
+MATCH
+POSSIBLE MISMATCH
+NOT FOUND
+
+Explainability
+
+The user can inspect:
+
+The structured infobox information
+
+The article evidence
+
+The Wikipedia source
+
+The article image
+
+⚠️ Limitations
+
+WikiFact Check is an experimental fact-consistency checker and should not be treated as an authoritative fact-verification system.
+
+1. Wikipedia Can Change
+
+Wikipedia content may be edited after a result is produced.
+
+2. Natural Language Is Complex
+
+A sentence can contain information that requires context beyond simple matching.
+
+3. Infoboxes Are Structured Differently
+
+Different Wikipedia articles may use different infobox templates and field formats.
+
+4. Evidence Selection
+
+A sentence containing the relevant names or values does not always establish the exact semantic relationship intended by the fact type. Evidence matching is therefore an area for continued improvement.
+
+5. API Availability
+
+The application depends on access to Wikimedia services for live article retrieval and images.
+
+🔮 Future Improvements
 
 Possible future improvements include:
 
-- Analyze a larger portion of the Wikimedia dataset.
-- Improve the sampling methodology.
-- Add additional content-richness indicators.
-- Include table counts.
-- Analyze reference quality and diversity.
-- Detect extremely short articles separately.
-- Add category-wise comparisons.
-- Add filtering by article type or topic.
-- Add time-based analysis using article versions.
-- Compare scores across different dataset snapshots.
-- Improve the scoring model using validated indicators.
-- Deploy the dashboard publicly.
+Stronger semantic sentence matching
 
----
+Relationship-aware founder detection
 
-# 🎯 Project Outcome
+More fact types
 
-WikiWeak Article Finder demonstrates how a large structured Wikipedia dataset can be transformed into an interactive data-analysis application.
+Better handling of aliases and alternate names
 
-The project combines:
+Multilingual Wikipedia support
 
-```text
-Large-Scale Dataset
-        +
-Data Processing
-        +
-Feature Engineering
-        +
-Percentile-Based Scoring
-        +
-Ranking
-        +
-Interactive Visualization
-```
+Confidence indicators
 
-The resulting system provides a transparent way to explore Wikipedia articles that contain **relatively limited measurable content within the analyzed sample**.
+Evidence ranking
 
----
+Multiple evidence sentences
 
-# 🌐 Project Repository
+Historical Wikipedia revision comparison
 
-GitHub:
+Automated evaluation across a larger test set
 
-https://github.com/Saksham-M4/WikiWeak-Article-Finder
+Improved entity recognition
 
----
+More robust infobox template handling
 
-# 👤 Author
+📊 Evaluation Strategy
 
-**Saksham Kumar**
+A meaningful evaluation should test different:
+
+Articles
+
+People
+Companies
+Organizations
+Places
+Historical subjects
+
+Fact Types
+
+Birth Date
+Founder
+Location
+Country
+
+Outcomes
+
+MATCH
+POSSIBLE MISMATCH
+NOT FOUND
+
+The evaluation should include both straightforward and naturally worded examples.
+
+🎓 Project Demonstration Flow
+
+For a short classroom demonstration:
+
+Step 1
+
+Show the WikiWeak connection:
+
+WikiWeak connected
+Article-title column: name
+
+Step 2
+
+Search:
+
+Narendra Modi
+
+Select:
+
+Birth Date
+
+Show:
+
+MATCH
+
+and the evidence sentence.
+
+Step 3
+
+Search:
+
+Google
+
+Select:
+
+Founder
+
+Show:
+
+MATCH
+
+and the article evidence.
+
+Step 4
+
+Explain the three outcomes:
+
+MATCH
+POSSIBLE MISMATCH
+NOT FOUND
+
+Step 5
+
+Explain the key technical idea:
+
+“We do not compare raw strings only. We normalize the structured fact and look for corresponding evidence in the article text.”
+
+📌 Project Status
+
+Completed Prototype
+
+Current implementation includes:
+
+WikiWeak dataset integration
+
+Automatic article-title column detection
+
+Wikipedia article retrieval
+
+Infobox fact extraction
+
+Fact normalization
+
+Article-text comparison
+
+Three-state result classification
+
+Exact evidence sentence display
+
+Wikipedia article image display
+
+Multiple fact types
+
+Streamlit interface
+
+Test utilities
+
+Local execution support
+
+Project documentation
+
+👤 Author
+
+Saksham Kumar
+
+Garden City University, Bengaluru
 
 Areas of interest:
 
-- Open Source
-- Wikimedia Projects
-- Data Science
-- Artificial Intelligence
-- Software Development
-- Practical Technology Projects
+Python
 
----
+Artificial Intelligence
 
-# 📜 Disclaimer
+Data Science
 
-WikiWeak Article Finder is an educational and experimental data-science project.
+Open Source
 
-The content-richness score is created specifically for this project and should not be interpreted as an official Wikipedia or Wikimedia quality assessment.
+Wikimedia technologies
 
-A low score only indicates relatively limited measurable content according to the selected factors and scoring method.
+Software Development
 
----
+📜 Disclaimer
 
-# 🙏 Acknowledgements
+WikiFact Check is an educational and experimental software project.
 
-This project uses structured Wikipedia data provided through the Wikimedia ecosystem.
+A MATCH result means that the implemented comparison logic found supporting agreement between the selected structured fact and available article evidence. It does not independently establish the ultimate truth of a claim.
 
-Special thanks to the organizers of the Open Source Day / WikiClub Tech event for providing the opportunity to work with Wikimedia structured data and explore open-source technologies.
+A POSSIBLE MISMATCH indicates that the available structured information and article evidence did not agree under the implemented matching rules.
 
----
+A NOT FOUND result means the requested corresponding information was not found in the available article text.
 
-# ⭐ Summary
+⭐ Summary
 
-WikiWeak Article Finder analyzes 10,000 sampled English Wikipedia articles, extracts measurable content features, calculates a percentile-based content-richness score, identifies the lowest-scoring group of the analyzed sample, and presents the results through an interactive Streamlit dashboard.
+WikiFact Check combines:
 
-### Core Idea
+WikiWeak Dataset
+       +
+Wikipedia Structured Data
+       +
+Natural-Language Article Text
+       +
+Fact Normalization
+       +
+Evidence Matching
+       +
+Three-State Classification
+       +
+Exact Evidence Display
+       +
+Article Images
+       +
+Interactive Streamlit UI
 
-```text
-Analyze → Measure → Score → Explain → Rank → Explore
-```
+Core Idea
 
-### WikiWeak Article Finder
+Retrieve
+   ↓
+Extract
+   ↓
+Normalize
+   ↓
+Compare
+   ↓
+Classify
+   ↓
+Show Evidence
 
-```text
-Find relatively limited-content articles
-              ↓
-Using measurable structured-data factors
-              ↓
-With transparent scoring
-              ↓
-Showing the actual factors behind the score
-              ↓
-Through an interactive dashboard
-```
-
----
-
-# ⭐ Project Status
-
-**Completed Prototype**
-
-The project includes:
-
-- Dataset analysis
-- Feature extraction
-- Word-count-based content analysis
-- Content-richness scoring
-- Article ranking
-- Limited-content detection
-- Results CSV
-- Interactive Streamlit dashboard
-- Search and filtering
-- Article score inspection
-- Score explanation
-- CSV export
-- Complete project documentation
+WikiFact Check — making Wikipedia fact consistency easier to inspect, understand, and demonstrate.
